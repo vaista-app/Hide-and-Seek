@@ -102,14 +102,19 @@ async function switchRole(){
  try{const next=role==='hider'?'seeker':'hider';const {error}=await sb.rpc('hs_set_role',{p_code:room,p_role:next});if(error)throw error;role=next;await loadPlayers()}catch(e){say(e)}
 }
 async function startSharing(){
- if(!navigator.geolocation)return alert('Location sharing is not supported in this browser. Open the app over HTTPS in Chrome and try again.');
+ if(!window.isSecureContext)return alert('Location needs a secure HTTPS website. Open the published https:// link in Chrome, not a preview or file:// page.');
+ if(!navigator.geolocation)return alert('Location sharing is not supported in this browser. Open the published HTTPS link in Chrome and try again.');
  navigator.geolocation.getCurrentPosition(async pos=>{
   try{await saveLocation(pos);if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=navigator.geolocation.watchPosition(p=>saveLocation(p).catch(console.warn),e=>say(e),{enableHighAccuracy:false,maximumAge:10000,timeout:20000});alert('Location sharing is on. You can stop it any time.')}catch(e){say(e)}
  },e=>alert(e.code===1?'Location permission was denied. Allow location for this site in browser settings.':e.code===2?'Your device could not get a location fix. Try again outdoors in a safe place.':'Location request timed out. Try again.'),{enableHighAccuracy:false,timeout:20000,maximumAge:10000});
 }
 async function saveLocation(pos){
- if(!room||!user)return;loc={lat:pos.coords.latitude,lon:pos.coords.longitude};
- const {error}=await sb.from('hs_locations').upsert({room_code:room,user_id:user.id,lat:loc.lat,lon:loc.lon,updated_at:new Date().toISOString()},{onConflict:'room_code,user_id'});if(error)throw error;
+ if(!room||!user)return;
+ loc={lat:pos.coords.latitude,lon:pos.coords.longitude};
+ const {error}=await sb.rpc('hs_save_location',{
+  p_code:room,p_lat:loc.lat,p_lon:loc.lon
+ });
+ if(error)throw error;
 }
 async function refreshRadar(){
  if(!room)return;const {data,error}=await sb.rpc('hs_radar',{p_code:room});if(error){$('radarCaption').textContent=error.message;return}
@@ -183,7 +188,10 @@ function updateHostSettings(){
 }
 async function stopLocation(){
  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
- if(sb&&room&&user)await sb.from('hs_locations').delete().eq('room_code',room).eq('user_id',user.id);
+ if(sb&&room&&user){
+  const {error}=await sb.rpc('hs_stop_location',{p_code:room});
+  if(error)console.warn('Could not clear location signal:',error.message);
+ }
  loc=null;$('radarCaption').textContent='Location sharing stopped.';
 }
 async function leave(){
