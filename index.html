@@ -53,7 +53,7 @@ h1,h2,.stat strong,#countdownClock,#secretRole{font-family:var(--display);font-w
 const SUPABASE_URL='https://vtwhdcvmmkfqvizypykf.supabase.co';
 const SUPABASE_KEY='sb_publishable_ObrqUJOFO2XLf3IUY7H4GQ_39S_hrG7';
 const $=id=>document.getElementById(id);
-let sb,user,room=null,host=false,role='hider',watchId=null,players=[],poller=null,gameTimer=null,seconds=600,loc=null;
+let sb,user,room=null,host=false,role='hider',watchId=null,gpsTimer=null,gpsBusy=false,players=[],poller=null,gameTimer=null,seconds=600,loc=null;
 let radarZoom=1;
 function show(id){['home','lobby','game'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
 function say(e){alert(e?.message||String(e))}
@@ -102,12 +102,41 @@ async function beginPolling(){
 async function switchRole(){
  try{const next=role==='hider'?'seeker':'hider';const {error}=await sb.rpc('hs_set_role',{p_code:room,p_role:next});if(error)throw error;role=next;await loadPlayers()}catch(e){say(e)}
 }
+async function getOnePosition(){
+ return new Promise((resolve,reject)=>{
+  navigator.geolocation.getCurrentPosition(resolve,reject,{
+   enableHighAccuracy:true,maximumAge:0,timeout:20000
+  });
+ });
+}
 async function startSharing(){
  if(!window.isSecureContext)return alert('Location needs a secure HTTPS website. Open the published https:// link in Chrome, not a preview or file:// page.');
  if(!navigator.geolocation)return alert('Location sharing is not supported in this browser. Open the published HTTPS link in Chrome and try again.');
- navigator.geolocation.getCurrentPosition(async pos=>{
-  try{await saveLocation(pos);if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=navigator.geolocation.watchPosition(p=>saveLocation(p).catch(console.warn),e=>say(e),{enableHighAccuracy:false,maximumAge:10000,timeout:20000});alert('Location sharing is on. You can stop it any time.')}catch(e){say(e)}
- },e=>alert(e.code===1?'Location permission was denied. Allow location for this site in browser settings.':e.code===2?'Your device could not get a location fix. Try again outdoors in a safe place.':'Location request timed out. Try again.'),{enableHighAccuracy:false,timeout:20000,maximumAge:10000});
+ if(!room)return alert('Join a room before sharing your location.');
+ try{
+  const firstPosition=await getOnePosition();
+  await saveLocation(firstPosition);
+  if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+  if(gpsTimer!==null)clearInterval(gpsTimer);
+  watchId=navigator.geolocation.watchPosition(
+   p=>saveLocation(p).catch(e=>console.warn('Location upload failed:',e)),
+   e=>console.warn('GPS watch warning:',e.message),
+   {enableHighAccuracy:true,maximumAge:0,timeout:20000}
+  );
+  // A periodic fresh location request backs up watchPosition on browsers that
+  // do not emit frequent updates. It does not guarantee a new GPS fix each time.
+  gpsTimer=setInterval(async()=>{
+   if(gpsBusy||!room)return;
+   gpsBusy=true;
+   try{const p=await getOnePosition();await saveLocation(p)}
+   catch(e){console.warn('Periodic location update:',e.message)}
+   finally{gpsBusy=false}
+  },5000);
+  $('radarCaption').textContent='LOCATION SHARING ON · KEEP THIS PAGE OPEN';
+  alert('Location sharing is on. Keep this page open while playing. You can stop sharing any time.');
+ }catch(e){
+  alert(e.code===1?'Location permission was denied. Allow location for this site in browser settings.':e.code===2?'Your device could not get a location fix. Try again outdoors in a safe place.':e.code===3?'Location request timed out. Try again with location enabled.':(e.message||'Could not start location sharing.'));
+ }
 }
 async function saveLocation(pos){
  if(!room||!user)return;
@@ -118,16 +147,19 @@ async function saveLocation(pos){
  if(error)throw error;
 }
 async function refreshRadar(){
- if(!room)return;const {data,error}=await sb.rpc('hs_radar',{p_code:room});if(error){$('radarCaption').textContent=error.message;return}
+ if(!room||radarBusy)return;radarBusy=true;
+ try{
+ const {data,error}=await sb.rpc('hs_radar',{p_code:room});if(error){$('radarCaption').textContent=error.message;return}
  const radar=$('radar');radar.querySelectorAll('.blip,.blip-label').forEach(n=>n.remove());
  (data||[]).forEach(p=>{
   const el=document.createElement('i');el.className='blip '+(p.user_id===user.id?'you':p.role);el.style.left=p.x_pct+'%';el.style.top=p.y_pct+'%';radar.appendChild(el);
   const label=document.createElement('span');label.className='blip-label';label.textContent=p.user_id===user.id?'You':p.display_name;label.style.left=p.x_pct+'%';label.style.top=p.y_pct+'%';radar.appendChild(label);
  });
  $('nearCount').textContent=(data||[]).length;
- $('radarCaption').textContent=(data||[]).length?'LIVE SCAN · REFRESHES EVERY 2 SECONDS':'No fresh location signals yet. Players must opt in to sharing.';
+ $('radarCaption').textContent=(data||[]).length?'LIVE SCAN · REFRESHES EVERY 2 SECONDS':'No fresh location signals yet. Each player must tap Allow location & start sharing.';
+ }finally{radarBusy=false}
 }
-let countdownEnd=null,matchUnlocked=false,countdownTicker=null,roundTimerStarted=false;
+let countdownEnd=null,matchUnlocked=false,countdownTicker=null,roundTimerStarted=false,radarBusy=false;
 function unlockRadar(){
  if(matchUnlocked)return;
  matchUnlocked=true;
@@ -189,6 +221,8 @@ function updateHostSettings(){
 }
 async function stopLocation(){
  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+ if(gpsTimer!==null){clearInterval(gpsTimer);gpsTimer=null}
+ gpsBusy=false;
  if(sb&&room&&user){
   const {error}=await sb.rpc('hs_stop_location',{p_code:room});
   if(error)console.warn('Could not clear location signal:',error.message);
