@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hide & Seek Radar</title>
 <style>
 *{box-sizing:border-box}
@@ -43,7 +43,7 @@ button:disabled{opacity:.6}
 .info{display:flex;gap:9px;margin-top:20px}
 .card{flex:1;background:#101c15;border:1px solid #243d2d;border-radius:12px;padding:13px}
 .card small{font-size:9px;color:#84978b}
-.card strong{display:block;font-size:18px;margin-top:7px}
+.card strong{display:block;font-size:16px;margin-top:7px}
 .players{margin-top:18px;padding:15px;background:#101b15;border:1px solid #243d2d;border-radius:13px;font-size:12px}
 .player{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #243d2d}
 .player:last-child{border:0}
@@ -55,9 +55,9 @@ button:disabled{opacity:.6}
 <div class="app">
 <header>
 <h2>HIDE & SEEK <span style="color:#65ed9a">.</span></h2>
-<span class="status" id="status">● COMPASS OFF</span>
+<span class="status" id="status">● WAITING</span>
 </header>
-<p class="sub">REAL PHONE COMPASS · SHORT RANGE RADAR</p>
+<p class="sub">LIVE COMPASS · GPS RADAR</p>
 
 <div class="radar">
 <div class="rotator" id="rotator">
@@ -75,116 +75,125 @@ button:disabled{opacity:.6}
 <div class="me"></div>
 </div>
 
-<div class="heading">YOUR PHONE HEADING
+<div class="heading">
+YOUR HEADING
 <strong id="heading">--°</strong>
-<span id="direction">Waiting for compass</span>
+<span id="direction">Compass waiting</span>
 </div>
 
-<button id="start">ENABLE REAL COMPASS</button>
+<button id="start">START RADAR · ENABLE PERMISSIONS</button>
 
 <div class="info">
-<div class="card"><small>SCAN RANGE</small><strong>150m</strong></div>
-<div class="card"><small>HIDERS</small><strong>03</strong></div>
-<div class="card"><small>SENSOR</small><strong id="sensor">OFF</strong></div>
+<div class="card"><small>GPS</small><strong id="gps">OFF</strong></div>
+<div class="card"><small>COMPASS</small><strong id="sensor">OFF</strong></div>
+<div class="card"><small>ACCURACY</small><strong id="accuracy">--</strong></div>
 </div>
 
 <div class="players">
-<div style="margin-bottom:5px">DEMO SIGNALS</div>
-<div class="player"><span>Hider 01</span><span class="green">45m · NE</span></div>
-<div class="player"><span>Hider 02</span><span class="green">82m · SW</span></div>
-<div class="player"><span>Hider 03</span><span class="green">30m · W</span></div>
+<div style="margin-bottom:5px">RADAR SIGNALS</div>
+<div class="player"><span>Your position</span><span class="green" id="position">Waiting</span></div>
+<div class="player"><span>Nearby players</span><span class="green">Demo signals</span></div>
 </div>
-
-<p class="note">Compass uses your device orientation sensor.<br>Player signals are simulated, not live GPS.</p>
+<p class="note">Live compass and GPS permissions are requested by your browser.<br>Player signals remain simulated until connected to a game room.</p>
 </div>
 
 <script>
-const rotator=document.getElementById('rotator');
-const headingText=document.getElementById('heading');
-const directionText=document.getElementById('direction');
-const statusText=document.getElementById('status');
-const sensorText=document.getElementById('sensor');
-const startButton=document.getElementById('start');
-
+const $=id=>document.getElementById(id);
+let gpsWatch=null;
 let lastHeading=null;
-let listenerAdded=false;
+let orientationHandler=null;
 
 function directionName(deg){
  const names=['N','NE','E','SE','S','SW','W','NW'];
  return names[Math.round(deg/45)%8];
 }
 
-function handleOrientation(event){
+function updateCompass(deg){
+ deg=(deg+360)%360;
+ lastHeading=deg;
+ $('rotator').style.transform=`rotate(${-deg}deg)`;
+ $('heading').textContent=Math.round(deg)+'°';
+ $('direction').textContent=directionName(deg);
+ $('sensor').textContent='ON';
+}
+
+function handleOrientation(e){
  let heading=null;
-
- // iOS compass heading
- if(typeof event.webkitCompassHeading==='number'){
-   heading=event.webkitCompassHeading;
+ if(typeof e.webkitCompassHeading==='number'){
+  heading=e.webkitCompassHeading;
+ }else if(e.absolute===true && typeof e.alpha==='number'){
+  heading=360-e.alpha;
  }
- // Android absolute orientation
- else if(event.absolute===true && typeof event.alpha==='number'){
-   heading=(360-event.alpha)%360;
- }
-
- if(heading===null || !Number.isFinite(heading))return;
-
- heading=(heading+360)%360;
- lastHeading=heading;
-
- // Counter-rotate the map so the phone's heading stays at the top
- rotator.style.transform=`rotate(${-heading}deg)`;
-
- headingText.textContent=`${Math.round(heading)}°`;
- directionText.textContent=directionName(heading);
- statusText.textContent='● COMPASS ACTIVE';
- sensorText.textContent='ON';
- startButton.textContent='COMPASS CONNECTED';
-}
-
-function orientationFallback(event){
- if(lastHeading!==null)return;
- if(typeof event.webkitCompassHeading==='number' ||
-    (event.absolute===true && typeof event.alpha==='number')){
-   handleOrientation(event);
+ if(heading!==null && Number.isFinite(heading)){
+  updateCompass(heading);
  }
 }
 
-startButton.addEventListener('click',async()=>{
- startButton.disabled=true;
- statusText.textContent='● REQUESTING SENSOR';
-
- try{
-  if(!('DeviceOrientationEvent' in window)){
-   throw new Error('Orientation sensor unsupported');
-  }
-
-  if(typeof DeviceOrientationEvent.requestPermission==='function'){
-   const permission=await DeviceOrientationEvent.requestPermission();
-   if(permission!=='granted')throw new Error('Permission denied');
-  }
-
-  if(!listenerAdded){
-   window.addEventListener('deviceorientation',orientationFallback,true);
-   listenerAdded=true;
-  }
-
-  setTimeout(()=>{
-   if(lastHeading===null){
-    statusText.textContent='● NO COMPASS DATA';
-    sensorText.textContent='UNAVAILABLE';
-    directionText.textContent='Check browser and sensor support';
-    startButton.textContent='TRY AGAIN';
-    startButton.disabled=false;
-   }
-  },5000);
-
- }catch(error){
-  statusText.textContent='● COMPASS UNAVAILABLE';
-  sensorText.textContent='OFF';
-  directionText.textContent=error.message;
-  startButton.textContent='TRY AGAIN';
-  startButton.disabled=false;
+async function enableCompass(){
+ if(!('DeviceOrientationEvent' in window)){
+  $('sensor').textContent='UNAVAILABLE';
+  return;
  }
+ if(typeof DeviceOrientationEvent.requestPermission==='function'){
+  const permission=await DeviceOrientationEvent.requestPermission();
+  if(permission!=='granted')throw Error('Compass permission denied');
+ }
+ if(!orientationHandler){
+  orientationHandler=handleOrientation;
+  window.addEventListener('deviceorientationabsolute',orientationHandler,true);
+  window.addEventListener('deviceorientation',orientationHandler,true);
+ }
+}
+
+function enableGPS(){
+ return new Promise((resolve,reject)=>{
+  if(!navigator.geolocation){
+   reject(Error('GPS is not supported'));
+   return;
+  }
+  gpsWatch=navigator.geolocation.watchPosition(
+   pos=>{
+    const coords=pos.coords;
+    $('gps').textContent='ON';
+    $('accuracy').textContent=Math.round(coords.accuracy)+'m';
+    $('position').textContent='GPS active';
+    resolve(true);
+   },
+   err=>reject(Error(err.message)),
+   {enableHighAccuracy:true,maximumAge:1000,timeout:15000}
+  );
+ });
+}
+
+$('start').addEventListener('click',async()=>{
+ $('start').disabled=true;
+ $('status').textContent='● REQUESTING ACCESS';
+
+ // Both requests are initiated from the user's button tap.
+ const compassTask=enableCompass();
+ const gpsTask=enableGPS();
+
+ const results=await Promise.allSettled([compassTask,gpsTask]);
+ const compassOK=results[0].status==='fulfilled';
+ const gpsOK=results[1].status==='fulfilled';
+
+ if(!compassOK)$('sensor').textContent='DENIED / UNSUPPORTED';
+ if(!gpsOK)$('gps').textContent='DENIED / ERROR';
+
+ $('status').textContent=compassOK&&gpsOK
+  ?'● RADAR READY':'● PARTIAL ACCESS';
+
+ $('start').textContent=compassOK&&gpsOK
+  ?'RADAR ACTIVE':'RETRY PERMISSIONS';
+ $('start').disabled=false;
+
+ if(!compassOK||!gpsOK){
+  alert('Some permissions were unavailable. Check your browser permissions and try again.');
+ }
+});
+
+window.addEventListener('pagehide',()=>{
+ if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);
 });
 </script>
 </body>
