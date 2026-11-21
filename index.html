@@ -1,1459 +1,191 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#090a0b">
-<title>HIDE & SEEK</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Roboto+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Hide & Seek Radar</title>
 <style>
-:root{
-  --bg:#050505;
-  --panel:#090909;
-  --line:#292929;
-  --yellow:#f2d84b;
-  --muted:#777;
-  --white:#f4f4f4;
-  --red:#e34d55;
-  --green:#43d17b;
-  --display:'Roboto Condensed','Arial Narrow',Impact,sans-serif;
-  --ui:'Inter',Arial,sans-serif
-}
-
 *{box-sizing:border-box}
-html,body{
-  margin:0;
-  min-height:100%;
-  background:var(--bg);
-  color:var(--white)
-}
-body{
-  font:500 14px var(--ui);
-  letter-spacing:.01em
-}
-button,input,select{font:inherit}
-button{border:0;cursor:pointer}
-
-.wrap{
-  max-width:560px;
-  margin:auto;
-  padding:22px 18px 38px;
-  position:relative
-}
-
-.top{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin:5px 0 28px;
-  padding-bottom:15px;
-  border-bottom:1px solid #242424
-}
-
-.brand{
-  font:900 23px var(--display);
-  letter-spacing:1.5px
-}
-.brand b{color:var(--red)}
-
-.pill{
-  border:0;
-  background:transparent;
-  color:var(--red);
-  font:800 10px var(--ui);
-  letter-spacing:2px;
-  padding:5px 0;
-  text-transform:uppercase
-}
-
-h1,h2,.stat strong,#countdownClock,#secretRole{
-  font-family:var(--display);
-  font-weight:900
-}
-
-h1{
-  font-size:clamp(48px,13vw,70px);
-  line-height:.88;
-  margin:14px 0 18px;
-  letter-spacing:-1.5px
-}
-h1 span{color:var(--red)}
-h2{
-  font-size:30px;
-  letter-spacing:.2px;
-  margin:0
-}
-
-.hero{
-  padding:25px 8px 24px;
-  border:0;
-  border-radius:0;
-  background:transparent;
-  margin-bottom:12px;
-  border-bottom:1px solid #262626
-}
-.hero p{
-  max-width:360px;
-  color:#929292;
-  font-size:13px;
-  line-height:1.75
-}
-
-.card{
-  background:transparent;
-  border:0;
-  border-top:1px solid #282828;
-  border-radius:0;
-  padding:17px 2px;
-  margin:13px 0
-}
-
-.label{
-  font:800 10px var(--ui);
-  letter-spacing:2px;
-  color:#858585;
-  margin-bottom:12px;
-  text-transform:uppercase
-}
-
-.btn{
-  width:100%;
-  padding:16px 14px;
-  border-radius:0;
-  background:var(--red);
-  color:#080808;
-  font:800 11px var(--ui);
-  letter-spacing:1.4px;
-  text-transform:uppercase;
-  margin-top:10px;
-  min-height:48px
-}
-.btn:disabled{
-  opacity:.45;
-  cursor:not-allowed
-}
-.btn.secondary{
-  background:#111;
-  color:#f1f1f1;
-  border:1px solid #3a3a3a
-}
-.btn.danger{
-  background:#171010;
-  color:#ef777c;
-  border:1px solid #683238
-}
-
-.row{display:flex;gap:10px}
-.row>*{flex:1}
-
-input,select{
-  width:100%;
-  background:#080808!important;
-  border:1px solid #3a3a3a!important;
-  color:#f4f4f4!important;
-  padding:15px!important;
-  border-radius:0!important;
-  font:500 13px var(--ui)!important;
-  outline:none
-}
-input:focus,select:focus{
-  border-color:var(--red)!important
-}
-
-.hidden{display:none!important}
-
-.small{
-  font:500 11px var(--ui);
-  color:#777;
-  line-height:1.8
-}
-
-.notice{
-  padding:13px;
-  border-radius:0;
-  background:#160d0e;
-  border-left:2px solid var(--red);
-  color:#c9a5a6;
-  font:500 11px var(--ui);
-  line-height:1.8;
-  margin:14px 0
-}
-
-.status{color:var(--green)}
-.dot{background:var(--green)}
-.players{display:grid;gap:0}
-
-/* Player list and distance labels */
-.player{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  border-bottom:1px solid #242424;
-  border-radius:0;
-  background:transparent;
-  padding:13px 2px;
-  font:600 12px var(--ui)
-}
-
-.player-main{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:5px
-}
-
-.player-distance{
-  font:500 10px var(--ui);
-  color:#929292;
-  letter-spacing:.2px
-}
-
-.tag{
-  font:800 9px var(--ui);
-  letter-spacing:1px;
-  border-radius:0;
-  background:#191919;
-  color:#aaa;
-  padding:5px 8px
-}
-.tag.seek{
-  background:#0c1b12;
-  color:var(--green)
-}
-.tag.hide{
-  background:#210e10;
-  color:#ff777e
-}
-
-/* Radar */
-.radarbox{
-  display:grid;
-  place-items:center;
-  padding:16px 0 8px
-}
-
+body{margin:0;background:#080e0b;color:#eaffef;font-family:Arial,sans-serif}
+.app{max-width:420px;margin:auto;padding:22px 20px}
+header{display:flex;justify-content:space-between;align-items:center}
+h2{font-size:20px;margin:0}
+.status{font-size:10px;color:#6cf3a0}
+.sub{font-size:11px;color:#81978a;margin:10px 0 25px}
 .radar{
-  width:100%;
-  max-width:none;
-  aspect-ratio:1.2;
-  border-radius:0;
-  border:1px solid #3b3b3b;
-  overflow:hidden;
-  position:relative;
-  background:
-    linear-gradient(
-      90deg,
-      transparent calc(25% - .5px),
-      #252525 25%,
-      transparent calc(25% + .5px),
-      transparent calc(50% - .5px),
-      #252525 50%,
-      transparent calc(50% + .5px),
-      transparent calc(75% - .5px),
-      #252525 75%,
-      transparent calc(75% + .5px)
-    ),
-    linear-gradient(
-      0deg,
-      transparent calc(25% - .5px),
-      #252525 25%,
-      transparent calc(25% + .5px),
-      transparent calc(50% - .5px),
-      #252525 50%,
-      transparent calc(50% + .5px),
-      transparent calc(75% - .5px),
-      #252525 75%,
-      transparent calc(75% + .5px)
-    ),
-    #070707
+ width:min(86vw,340px);aspect-ratio:1;margin:auto;
+ position:relative;border-radius:50%;overflow:hidden;
+ border:1px solid #326648;
+ background:repeating-radial-gradient(circle,transparent 0 47px,#244c35 48px 49px),radial-gradient(circle,#10261a,#07120c 80%);
+ box-shadow:0 0 35px #1b583855,inset 0 0 30px #1b583855;
 }
-
-.center{
-  position:absolute;
-  width:10px;
-  height:10px;
-  border-radius:50%;
-  background:var(--yellow);
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  z-index:2
-}
-
-.blip{
-  position:absolute;
-  width:9px;
-  height:9px;
-  border-radius:50%;
-  transform:translate(-50%,-50%);
-  z-index:3
-}
-.blip.hider{background:var(--red)}
-.blip.seeker{background:var(--green)}
-.blip.you{background:var(--yellow)}
-
-.blip-label{
-  position:absolute;
-  transform:translate(9px,-50%);
-  font:700 10px var(--ui);
-  white-space:nowrap;
-  color:#f5f5f5;
-  text-shadow:0 1px 2px #000;
-  z-index:4
-}
-
-.radar-caption{
-  font:500 10px var(--ui);
-  color:#777;
-  margin-top:10px;
-  text-align:center
-}
-
-.statgrid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:0;
-  border-top:1px solid #292929;
-  border-bottom:1px solid #292929
-}
-.stat{
-  background:transparent;
-  border-radius:0;
-  padding:14px 10px
-}
-.stat+.stat{border-left:1px solid #292929}
-.stat strong{
-  display:block;
-  font-size:28px;
-  color:var(--red)
-}
-.stat span{
-  font:800 9px var(--ui);
-  letter-spacing:1.5px;
-  color:#777
-}
-
-.legend{
-  display:flex;
-  justify-content:center;
-  gap:16px;
-  font:700 10px var(--ui);
-  color:#999;
-  letter-spacing:.5px;
-  margin:10px
-}
-.legend i{
-  display:inline-block;
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  margin-right:5px
-}
-
-.footer{
-  border-top:1px solid #222;
-  padding-top:18px;
-  text-align:left;
-  font:700 9px var(--ui);
-  letter-spacing:1.8px;
-  color:#656565;
-  margin-top:28px
-}
-
-#countdownPanel{
-  border:1px solid #303030!important;
-  background:#070707!important
-}
-#countdownClock{
-  font-size:clamp(48px,14vw,64px)!important;
-  letter-spacing:2px!important
-}
-#secretRole{
-  font-size:clamp(32px,9vw,42px)!important
-}
-
-/* Welcome screen */
-.intro{
-  position:fixed;
-  inset:0;
-  z-index:50;
-  background:#050505;
-  color:#f5f5f5;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px 18px;
-  overflow:hidden;
-  transition:opacity .35s ease,visibility .35s ease
-}
-.intro:before{
-  content:'';
-  position:absolute;
-  top:0;
-  bottom:0;
-  left:33.5%;
-  width:1px;
-  background:#252525
-}
-.intro.hidden-intro{
-  opacity:0;
-  visibility:hidden;
-  pointer-events:none
-}
-.intro-top{
-  position:absolute;
-  top:22px;
-  left:22px;
-  right:22px;
-  display:flex;
-  justify-content:space-between;
-  color:#777;
-  font:700 10px var(--ui);
-  letter-spacing:2px
-}
-.intro-main{
-  position:relative;
-  width:min(100%,430px);
-  padding-left:16px;
-  margin-top:0
-}
-.intro-kicker{
-  color:var(--red);
-  font:800 11px var(--ui);
-  letter-spacing:1.6px;
-  margin-bottom:18px
-}
-.intro-title{
-  font:900 clamp(66px,17vw,100px)/.78 var(--display);
-  letter-spacing:-2px;
-  text-transform:uppercase
-}
-.intro-title span{display:block}
-.intro-continue{
-  margin-top:36px;
-  color:#777;
-  font:800 10px var(--ui);
-  letter-spacing:2px;
-  display:flex;
-  align-items:center;
-  gap:13px
-}
-.intro-continue i{
-  width:9px;
-  height:9px;
-  background:var(--red);
-  display:inline-block
-}
-.intro-close{
-  position:absolute;
-  right:4px;
-  top:25px;
-  background:none;
-  color:var(--red);
-  font:400 38px Arial;
-  border:0;
-  padding:0 8px
-}
-.intro-footer{
-  position:absolute;
-  bottom:22px;
-  left:22px;
-  color:#666;
-  font:700 9px var(--ui);
-  letter-spacing:1.8px
-}
-
-@media(min-width:600px){
-  .intro-main{margin-left:0}
-  .wrap{padding-top:28px}
-}
+.rotator{position:absolute;inset:0;border-radius:50%;transition:transform .12s linear}
+.cross:before,.cross:after{content:"";position:absolute;background:#285039}
+.cross:before{height:100%;width:1px;left:50%}
+.cross:after{width:100%;height:1px;top:50%}
+.direction{position:absolute;font-size:13px;font-weight:bold;color:#a8cbb3;z-index:3}
+.n{top:10px;left:50%;transform:translateX(-50%);color:#75ffad}
+.s{bottom:10px;left:50%;transform:translateX(-50%)}
+.e{right:12px;top:50%;transform:translateY(-50%)}
+.w{left:12px;top:50%;transform:translateY(-50%)}
+.dot{position:absolute;width:10px;height:10px;border-radius:50%;background:#62f49b;box-shadow:0 0 13px #62f49b;z-index:4}
+.p1{left:68%;top:27%}.p2{left:29%;top:67%}.p3{left:24%;top:40%}
+.dist{position:absolute;font-size:10px;color:#a9f5bf;z-index:5}
+.d1{left:72%;top:23%}.d2{left:32%;top:71%}.d3{left:9%;top:36%}
+.sweep{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0deg,#48f28b55 50deg,transparent 85deg);animation:spin 3s linear infinite;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.me{position:absolute;left:50%;top:50%;width:13px;height:13px;background:#68bfff;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 15px #68bfff;z-index:6}
+.heading{text-align:center;margin:22px 0;color:#82968a;font-size:12px}
+.heading strong{display:block;color:#75ffad;font-size:25px;margin-top:6px}
+button{width:100%;padding:15px;background:#183c27;color:#bfffd0;border:1px solid #39734c;border-radius:12px;font-size:14px;font-weight:bold}
+button:disabled{opacity:.6}
+.info{display:flex;gap:9px;margin-top:20px}
+.card{flex:1;background:#101c15;border:1px solid #243d2d;border-radius:12px;padding:13px}
+.card small{font-size:9px;color:#84978b}
+.card strong{display:block;font-size:18px;margin-top:7px}
+.players{margin-top:18px;padding:15px;background:#101b15;border:1px solid #243d2d;border-radius:13px;font-size:12px}
+.player{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid #243d2d}
+.player:last-child{border:0}
+.green{color:#6cf3a0}
+.note{text-align:center;color:#718477;font-size:10px;line-height:1.6;margin-top:17px}
 </style>
 </head>
-
 <body>
+<div class="app">
+<header>
+<h2>HIDE & SEEK <span style="color:#65ed9a">.</span></h2>
+<span class="status" id="status">● COMPASS OFF</span>
+</header>
+<p class="sub">REAL PHONE COMPASS · SHORT RANGE RADAR</p>
 
-<div class="intro" id="introScreen" role="button" aria-label="Tap to continue">
-  <div class="intro-top">
-    <span>CHANCE_PROTOCOL</span>
-    <span>01 / 01</span>
-  </div>
-
-  <div class="intro-main">
-    <div class="intro-kicker">&gt; INIT_WELCOME()</div>
-    <div class="intro-title">
-      <span>WELCOME</span>
-      <span>SOHAN.</span>
-    </div>
-    <div class="intro-continue">
-      <i></i> TAP TO CONTINUE
-    </div>
-    <button class="intro-close" id="introClose" aria-label="Skip intro">×</button>
-  </div>
-
-  <div class="intro-footer">SOHAN STUDIO · PRIVATE CONTROL INTERFACE</div>
+<div class="radar">
+<div class="rotator" id="rotator">
+<div class="cross"></div>
+<span class="direction n">N</span>
+<span class="direction s">S</span>
+<span class="direction e">E</span>
+<span class="direction w">W</span>
+<div class="dot p1"></div><div class="dot p2"></div><div class="dot p3"></div>
+<span class="dist d1">45m</span>
+<span class="dist d2">82m</span>
+<span class="dist d3">30m</span>
+</div>
+<div class="sweep"></div>
+<div class="me"></div>
 </div>
 
-<main class="wrap">
+<div class="heading">YOUR PHONE HEADING
+<strong id="heading">--°</strong>
+<span id="direction">Waiting for compass</span>
+</div>
 
-<header class="top">
-  <div class="brand">HIDE <b>&</b> SEEK</div>
-  <div class="pill" id="connection">CONNECTING</div>
-</header>
+<button id="start">ENABLE REAL COMPASS</button>
 
-<!-- HOME -->
-<section id="home">
+<div class="info">
+<div class="card"><small>SCAN RANGE</small><strong>150m</strong></div>
+<div class="card"><small>HIDERS</small><strong>03</strong></div>
+<div class="card"><small>SENSOR</small><strong id="sensor">OFF</strong></div>
+</div>
 
-  <div class="hero">
-    <div class="pill">MULTIPLAYER RADAR GAME</div>
-    <h1>READY.<br><span>SET. HIDE.</span></h1>
-    <p>Create a room or enter a friend's six-character code. Anyone can host.</p>
-  </div>
+<div class="players">
+<div style="margin-bottom:5px">DEMO SIGNALS</div>
+<div class="player"><span>Hider 01</span><span class="green">45m · NE</span></div>
+<div class="player"><span>Hider 02</span><span class="green">82m · SW</span></div>
+<div class="player"><span>Hider 03</span><span class="green">30m · W</span></div>
+</div>
 
-  <div class="card">
-    <div class="label">YOUR PLAYER NAME</div>
-    <input id="playerName" maxlength="24" placeholder="Enter your name">
-  </div>
-
-  <div class="card">
-    <div class="label">CREATE A NEW GAME</div>
-    <button class="btn" id="create">Create room</button>
-  </div>
-
-  <div class="card">
-    <div class="label">JOIN YOUR FRIENDS</div>
-    <input
-      id="joinCode"
-      maxlength="6"
-      placeholder="Enter 6-character room code"
-      style="text-transform:uppercase"
-    >
-    <button class="btn secondary" id="join">Join room</button>
-  </div>
-
-  <p class="small">
-    Your account is created anonymously on this device.
-    Use the same browser/device to return as the same player.
-  </p>
-
-</section>
-
-<!-- LOBBY -->
-<section id="lobby" class="hidden">
-
-  <div class="card">
-    <div class="label">ROOM CODE · SHARE WITH FRIENDS</div>
-    <h1 id="roomCode" style="color:var(--yellow);letter-spacing:5px">------</h1>
-    <button class="btn secondary" id="copyCode">Copy room code</button>
-    <p class="small">
-      Anyone can create a room and become its host.
-      Minimum 2 players · Maximum 12.
-    </p>
-  </div>
-
-  <div class="card">
-    <div class="label">PLAYERS <span id="playerCount"></span></div>
-    <div class="players" id="playerList"></div>
-
-    <div id="hostSettings">
-
-      <div class="label" style="margin-top:14px">NUMBER OF SEEKERS</div>
-      <select id="seekerCount"></select>
-
-      <p class="small">
-        Choose any number of Seekers up to one fewer than the player count.
-      </p>
-
-      <div class="label" style="margin-top:18px">RADAR COUNTDOWN</div>
-      <select id="countdownDuration">
-        <option value="30">30 seconds</option>
-        <option value="60">1 minute</option>
-        <option value="90">1 minute 30 seconds</option>
-        <option value="120">2 minutes</option>
-        <option value="150">2 minutes 30 seconds</option>
-        <option value="180" selected>3 minutes</option>
-        <option value="210">3 minutes 30 seconds</option>
-        <option value="240">4 minutes</option>
-        <option value="270">4 minutes 30 seconds</option>
-        <option value="300">5 minutes</option>
-      </select>
-
-      <p class="small">The host sets one countdown for everyone.</p>
-    </div>
-
-    <p class="small">
-      The host chooses the number of Seekers.
-      Roles are assigned randomly when the match starts.
-    </p>
-  </div>
-
-  <div class="notice">
-    Only share location with people who have agreed to play.
-    Choose a safe, permitted play area; stay away from roads,
-    restricted areas and private property.
-  </div>
-
-  <button class="btn" id="startShare">Allow location & start sharing</button>
-  <button class="btn secondary" id="startGame">Start match (host)</button>
-  <button class="btn danger" id="leave">Leave room</button>
-
-</section>
-
-<!-- GAME -->
-<section id="game" class="hidden">
-
-  <div class="row" style="align-items:center">
-    <div>
-      <div class="label">LIVE ROUND</div>
-      <h2>PLAYER RADAR</h2>
-    </div>
-    <div class="pill" id="roleBadge">HIDER</div>
-  </div>
-
-  <div
-    class="card"
-    id="countdownPanel"
-    style="text-align:center;padding:28px 18px"
-  >
-    <div class="label">YOUR SECRET ROLE</div>
-
-    <h1 id="secretRole" style="font-size:30px;color:var(--yellow)">
-      WAITING…
-    </h1>
-
-    <p class="small" id="roleHint">
-      Your role is private. Keep it secret!
-    </p>
-
-    <div class="label" style="margin-top:22px">RADAR UNLOCKS IN</div>
-
-    <div
-      id="countdownClock"
-      style="font-size:54px;font-weight:900;letter-spacing:2px;color:var(--yellow)"
-    >03:00</div>
-
-    <p class="small">
-      Everyone in the room shares this same countdown.
-    </p>
-  </div>
-
-  <div id="radarPanel" class="hidden">
-
-    <div class="card">
-      <div class="radarbox">
-        <div class="radar" id="radar">
-          <div class="center"></div>
-        </div>
-      </div>
-
-      <div class="legend">
-        <span><i style="background:var(--red)"></i>Hiders</span>
-        <span><i style="background:var(--green)"></i>Seekers</span>
-        <span><i style="background:var(--yellow)"></i>You</span>
-      </div>
-
-      <div class="radar-caption" id="radarCaption">
-        Waiting for player signals…
-      </div>
-    </div>
-
-    <div class="statgrid">
-      <div class="stat">
-        <strong id="nearCount">0</strong>
-        <span>ACTIVE PLAYERS</span>
-      </div>
-
-      <div class="stat">
-        <strong id="timeLeft">10:00</strong>
-        <span>ROUND TIMER</span>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="label">PLAYERS IN THIS ROOM</div>
-      <div class="players" id="gamePlayers"></div>
-    </div>
-
-    <div class="notice">
-      The radar shows approximate relative positions, not exact pins or addresses.
-      Play only in a supervised, agreed, bounded safe area.
-      Do not use roads, water, isolated places, restricted areas or private property.
-    </div>
-
-  </div>
-
-  <button class="btn secondary" id="stopShare">Stop sharing location</button>
-  <button class="btn danger" id="endGame">End / leave round</button>
-
-</section>
-
-<div class="footer">HIDE & SEEK · PLAY FAIR · STAY SAFE</div>
-
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<p class="note">Compass uses your device orientation sensor.<br>Player signals are simulated, not live GPS.</p>
+</div>
 
 <script>
-const SUPABASE_URL='https://vtwhdcvmmkfqvizypykf.supabase.co';
-const SUPABASE_KEY='sb_publishable_ObrqUJOFO2XLf3IUY7H4GQ_39S_hrG7';
+const rotator=document.getElementById('rotator');
+const headingText=document.getElementById('heading');
+const directionText=document.getElementById('direction');
+const statusText=document.getElementById('status');
+const sensorText=document.getElementById('sensor');
+const startButton=document.getElementById('start');
 
-const $=id=>document.getElementById(id);
+let lastHeading=null;
+let listenerAdded=false;
 
-let sb;
-let user;
-let room=null;
-let host=false;
-let role='hider';
-let watchId=null;
-let players=[];
-let poller=null;
-let gameTimer=null;
-let seconds=600;
-let loc=null;
-
-function show(id){
-  ['home','lobby','game'].forEach(x=>{
-    $(x).classList.toggle('hidden',x!==id);
-  });
+function directionName(deg){
+ const names=['N','NE','E','SE','S','SW','W','NW'];
+ return names[Math.round(deg/45)%8];
 }
 
-function say(e){
-  alert(e?.message||String(e));
+function handleOrientation(event){
+ let heading=null;
+
+ // iOS compass heading
+ if(typeof event.webkitCompassHeading==='number'){
+   heading=event.webkitCompassHeading;
+ }
+ // Android absolute orientation
+ else if(event.absolute===true && typeof event.alpha==='number'){
+   heading=(360-event.alpha)%360;
+ }
+
+ if(heading===null || !Number.isFinite(heading))return;
+
+ heading=(heading+360)%360;
+ lastHeading=heading;
+
+ // Counter-rotate the map so the phone's heading stays at the top
+ rotator.style.transform=`rotate(${-heading}deg)`;
+
+ headingText.textContent=`${Math.round(heading)}°`;
+ directionText.textContent=directionName(heading);
+ statusText.textContent='● COMPASS ACTIVE';
+ sensorText.textContent='ON';
+ startButton.textContent='COMPASS CONNECTED';
 }
 
-function safe(s){
-  return String(s??'').replace(/[&<>"']/g,c=>({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'":'&#39;'
-  }[c]));
+function orientationFallback(event){
+ if(lastHeading!==null)return;
+ if(typeof event.webkitCompassHeading==='number' ||
+    (event.absolute===true && typeof event.alpha==='number')){
+   handleOrientation(event);
+ }
 }
 
-/* INITIALIZE */
+startButton.addEventListener('click',async()=>{
+ startButton.disabled=true;
+ statusText.textContent='● REQUESTING SENSOR';
 
-async function init(){
-  try{
-    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-
-    let {data,error}=await sb.auth.getSession();
-    if(error)throw error;
-
-    if(!data.session){
-      const a=await sb.auth.signInAnonymously();
-      if(a.error)throw a.error;
-      user=a.data.user;
-    }else{
-      user=data.session.user;
-    }
-
-    $('connection').textContent='CONNECTED';
-    $('connection').style.color='var(--green)';
-
-    $('playerName').value=
-      localStorage.getItem('hs_name')||
-      ('Player-'+user.id.slice(0,4));
-
-  }catch(e){
-    $('connection').textContent='CONNECTION ERROR';
-    say(e);
-  }
-}
-
-function name(){
-  const n=$('playerName').value.trim()||
-    ('Player-'+user.id.slice(0,4));
-
-  localStorage.setItem('hs_name',n);
-  return n;
-}
-
-/* CREATE ROOM */
-
-async function createRoom(){
-  try{
-    if(!user)throw Error('Still connecting. Please wait a moment.');
-
-    const {data,error}=await sb.rpc('hs_create_room',{
-      p_display_name:name()
-    });
-
-    if(error)throw error;
-
-    await enterRoom(data,true);
-
-  }catch(e){
-    say(e);
-  }
-}
-
-/* JOIN ROOM */
-
-async function joinRoom(){
-  try{
-    if(!user)throw Error('Still connecting. Please wait a moment.');
-
-    const c=$('joinCode').value.trim().toUpperCase();
-
-    if(!/^[A-Z0-9]{6}$/.test(c)){
-      throw Error('Enter a valid 6-character room code.');
-    }
-
-    const {data,error}=await sb.rpc('hs_join_room',{
-      p_code:c,
-      p_display_name:name()
-    });
-
-    if(error)throw error;
-
-    await enterRoom(c,false,data);
-
-  }catch(e){
-    say(e);
-  }
-}
-
-/* ENTER ROOM */
-
-async function enterRoom(code,isHost,joinedRole){
-  room=String(code).toUpperCase();
-  host=isHost;
-  role=joinedRole||(isHost?'seeker':'hider');
-
-  $('roomCode').textContent=room;
-
-  show('lobby');
-
-  await loadPlayers();
-  beginPolling();
-}
-
-/* PLAYER LIST */
-
-async function loadPlayers(){
-  if(!room)return;
-
-  const {data,error}=await sb.rpc('hs_room_players_list',{
-    p_code:room
-  });
-
-  if(error)throw error;
-
-  players=data||[];
-
-  $('playerCount').textContent='('+players.length+'/12)';
-
-  $('playerList').innerHTML=players.map(p=>`
-    <div class="player">
-      <span class="player-main">
-        <span>
-          ${safe(p.display_name)}
-          ${p.user_id===user.id?'(you)':''}
-          ${p.is_host?'· HOST':''}
-        </span>
-
-        <small
-          class="player-distance"
-          data-distance-user="${safe(p.user_id)}"
-        >
-          ${p.user_id===user.id?'You':'Distance unavailable'}
-        </small>
-      </span>
-
-      ${p.role?`
-        <span class="tag ${p.role==='seeker'?'seek':'hide'}">
-          ${p.role.toUpperCase()}
-        </span>
-      `:''}
-    </div>
-  `).join('');
-
-  $('gamePlayers').innerHTML=$('playerList').innerHTML;
-
-  const me=players.find(p=>p.user_id===user.id);
-
-  if(me){
-    if(me.role)role=me.role;
-    host=me.is_host;
+ try{
+  if(!('DeviceOrientationEvent' in window)){
+   throw new Error('Orientation sensor unsupported');
   }
 
-  $('roleBadge').textContent=role.toUpperCase();
-
-  updateHostSettings();
-}
-
-/* ROOM POLLING */
-
-async function beginPolling(){
-  if(poller)clearInterval(poller);
-
-  poller=setInterval(async()=>{
-    try{
-      await loadPlayers();
-
-      const {data,error}=await sb.rpc('hs_match_state',{
-        p_code:room
-      });
-
-      if(error)throw error;
-
-      if(data&&data[0]){
-        const st=data[0];
-
-        if(st.status==='playing'){
-          showMatchState(st);
-        }else if(st.status==='finished'){
-          alert('The host ended this room.');
-          await leave();
-        }
-      }
-
-    }catch(e){
-      console.warn(e);
-    }
-  },1000);
-}
-
-/* CHANGE ROLE */
-
-async function switchRole(){
-  try{
-    const next=role==='hider'?'seeker':'hider';
-
-    const {error}=await sb.rpc('hs_set_role',{
-      p_code:room,
-      p_role:next
-    });
-
-    if(error)throw error;
-
-    role=next;
-    await loadPlayers();
-
-  }catch(e){
-    say(e);
-  }
-}
-
-/* LOCATION SHARING */
-
-async function startSharing(){
-  if(!navigator.geolocation){
-    return alert(
-      'Location sharing is not supported in this browser. '+
-      'Open the app over HTTPS in Chrome and try again.'
-    );
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){
+   const permission=await DeviceOrientationEvent.requestPermission();
+   if(permission!=='granted')throw new Error('Permission denied');
   }
 
-  navigator.geolocation.getCurrentPosition(
-    async pos=>{
-      try{
-        await saveLocation(pos);
-
-        if(watchId!==null){
-          navigator.geolocation.clearWatch(watchId);
-        }
-
-        watchId=navigator.geolocation.watchPosition(
-          p=>saveLocation(p).catch(console.warn),
-          e=>say(e),
-          {
-            enableHighAccuracy:false,
-            maximumAge:10000,
-            timeout:20000
-          }
-        );
-
-        alert(
-          'Location sharing is on. '+
-          'You can stop it any time.'
-        );
-
-      }catch(e){
-        say(e);
-      }
-    },
-
-    e=>{
-      alert(
-        e.code===1
-          ?'Location permission was denied. Allow location for this site in browser settings.'
-          :e.code===2
-          ?'Your device could not get a location fix. Try again outdoors in a safe place.'
-          :'Location request timed out. Try again.'
-      );
-    },
-
-    {
-      enableHighAccuracy:false,
-      timeout:20000,
-      maximumAge:10000
-    }
-  );
-}
-
-/* SAVE LOCATION THROUGH SUPABASE RPC */
-
-async function saveLocation(pos){
-  if(!room||!user)return;
-
-  loc={
-    lat:pos.coords.latitude,
-    lon:pos.coords.longitude
-  };
-
-  const {error}=await sb.rpc('hs_save_location',{
-    p_code:room,
-    p_lat:loc.lat,
-    p_lon:loc.lon
-  });
-
-  if(error)throw error;
-}
-
-/* APPROXIMATE DISTANCE LABELS */
-
-function distanceLabel(p){
-
-  if(p.user_id===user.id){
-    return 'You';
+  if(!listenerAdded){
+   window.addEventListener('deviceorientation',orientationFallback,true);
+   listenerAdded=true;
   }
 
-  const band=String(p.distance_band||'').toLowerCase();
-
-  if(
-    band.includes('very close')||
-    band.includes('within 50')||
-    band.includes('0-50')||
-    band==='close'
-  ){
-    return 'Within 50 ft';
-  }
-
-  if(
-    band.includes('near')||
-    band.includes('50-150')
-  ){
-    return '50–150 ft';
-  }
-
-  if(
-    band.includes('far')||
-    band.includes('150-300')
-  ){
-    return '150–300 ft';
-  }
-
-  if(
-    band.includes('edge')||
-    band.includes('over 300')
-  ){
-    return 'Over 300 ft';
-  }
-
-  /*
-    Compatibility with the earlier SQL update:
-    If distance_ft is returned, it is only used to
-    choose an approximate range, never displayed exactly.
-  */
-
-  const feet=Number(p.distance_ft);
-
-  if(Number.isFinite(feet)){
-    if(feet<50)return 'Within 50 ft';
-    if(feet<150)return '50–150 ft';
-    if(feet<300)return '150–300 ft';
-    return 'Over 300 ft';
-  }
-
-  return 'Distance unavailable';
-}
-
-/* RADAR REFRESH */
-
-async function refreshRadar(){
-  if(!room)return;
-
-  const {data,error}=await sb.rpc('hs_radar',{
-    p_code:room
-  });
-
-  if(error){
-    $('radarCaption').textContent=error.message;
-    return;
-  }
-
-  const radar=$('radar');
-
-  radar.querySelectorAll('.blip,.blip-label').forEach(n=>{
-    n.remove();
-  });
-
-  (data||[]).forEach(p=>{
-
-    const el=document.createElement('i');
-
-    el.className='blip '+
-      (p.user_id===user.id?'you':p.role);
-
-    el.style.left=p.x_pct+'%';
-    el.style.top=p.y_pct+'%';
-
-    radar.appendChild(el);
-
-    const distance=distanceLabel(p);
-
-    const label=document.createElement('span');
-
-    label.className='blip-label';
-
-    label.textContent=p.user_id===user.id
-      ?'You'
-      :`${p.display_name} · ${distance}`;
-
-    label.style.left=p.x_pct+'%';
-    label.style.top=p.y_pct+'%';
-
-    radar.appendChild(label);
-
-    /*
-      Update the distance beside the player's name
-      in both the lobby list and game list.
-    */
-
-    document.querySelectorAll(
-      `[data-distance-user="${p.user_id}"]`
-    ).forEach(node=>{
-      node.textContent=distance;
-    });
-
-  });
-
-  $('nearCount').textContent=(data||[]).length;
-
-  $('radarCaption').textContent=(data||[]).length
-    ?'Approximate player distances · refreshed every 2 seconds'
-    :'No fresh location signals yet. Players must opt in to sharing.';
-}
-
-/* MATCH COUNTDOWN */
-
-let countdownEnd=null;
-let matchUnlocked=false;
-let countdownTicker=null;
-let roundTimerStarted=false;
-
-function unlockRadar(){
-  if(matchUnlocked)return;
-
-  matchUnlocked=true;
-
-  $('countdownPanel').classList.add('hidden');
-  $('radarPanel').classList.remove('hidden');
-
-  $('roleHint').textContent=
-    'Radar unlocked! Green names are Seekers; red names are Hiders.';
-
-  startRoundTimer();
-
-  refreshRadar();
-
-  if(countdownTicker){
-    clearInterval(countdownTicker);
-    countdownTicker=null;
-  }
-
-  if(poller)clearInterval(poller);
-
-  /*
-    Radar and player distances refresh every 2 seconds.
-  */
-
-  poller=setInterval(async()=>{
-    await loadPlayers().catch(()=>{});
-    await refreshRadar();
-  },2000);
-}
-
-/* MATCH STATE */
-
-function showMatchState(st){
-  role=st.my_role||role;
-
-  if($('game').classList.contains('hidden')){
-    show('game');
-  }
-
-  $('roleBadge').textContent=role
-    ?role.toUpperCase()
-    :'PLAYER';
-
-  $('secretRole').textContent=role==='seeker'
-    ?'YOU ARE A SEEKER'
-    :'YOU ARE A HIDER';
-
-  $('secretRole').style.color=role==='seeker'
-    ?'var(--green)'
-    :'var(--red)';
-
-  if(!matchUnlocked){
-
-    $('roleHint').textContent=
-      'Your role is private. Other players cannot see it during the countdown.';
-
-    const nextEnd=st.countdown_ends_at
-      ?new Date(st.countdown_ends_at).getTime()
-      :Date.now();
-
-    if(countdownEnd!==nextEnd){
-      countdownEnd=nextEnd;
-
-      if(countdownTicker){
-        clearInterval(countdownTicker);
-      }
-    }
-
-    const updateClock=()=>{
-      const left=Math.max(
-        0,
-        Math.ceil((countdownEnd-Date.now())/1000)
-      );
-
-      $('countdownClock').textContent=
-        Math.floor(left/60)+':'+
-        String(left%60).padStart(2,'0');
-
-      if(left<=0){
-        unlockRadar();
-      }
-    };
-
-    updateClock();
-
-    if(!matchUnlocked&&!countdownTicker){
-      countdownTicker=setInterval(updateClock,250);
-    }
-  }
-}
-
-/* ROUND TIMER */
-
-function startRoundTimer(){
-  if(roundTimerStarted)return;
-
-  roundTimerStarted=true;
-  seconds=600;
-
-  $('timeLeft').textContent='10:00';
-
-  if(gameTimer)clearInterval(gameTimer);
-
-  gameTimer=setInterval(()=>{
-    seconds=Math.max(0,seconds-1);
-
-    $('timeLeft').textContent=
-      Math.floor(seconds/60)+':'+
-      String(seconds%60).padStart(2,'0');
-
-    if(!seconds){
-      clearInterval(gameTimer);
-    }
-  },1000);
-}
-
-/* START GAME */
-
-async function startGame(){
-  try{
-    if(!host){
-      throw Error('Only the host can start the match.');
-    }
-
-    if(players.length<2){
-      throw Error(
-        'Invite at least one other player first. '+
-        'A minimum of 2 players is required.'
-      );
-    }
-
-    const n=Number($('seekerCount').value||1);
-
-    if(!Number.isInteger(n)||n<1||n>=players.length){
-      throw Error(
-        'Choose a valid number of Seekers. '+
-        'At least one Hider must remain.'
-      );
-    }
-
-    $('startGame').disabled=true;
-    $('startGame').textContent='STARTING…';
-
-    const duration=Number(
-      $('countdownDuration').value||180
-    );
-
-    if(
-      !Number.isInteger(duration)||
-      duration<30||
-      duration>300
-    ){
-      throw Error(
-        'Choose a countdown from 30 seconds to 5 minutes.'
-      );
-    }
-
-    const {data,error}=await sb.rpc('hs_start_room',{
-      p_code:room,
-      p_seeker_count:n,
-      p_countdown_seconds:duration
-    });
-
-    if(error)throw error;
-
-    const {data:state,error:se}=await sb.rpc(
-      'hs_match_state',
-      {p_code:room}
-    );
-
-    if(se)throw se;
-
-    if(state&&state[0]){
-      showMatchState(state[0]);
-    }
-
-  }catch(e){
-    say(e);
-  }finally{
-    $('startGame').disabled=false;
-    $('startGame').textContent='Start match (host)';
-  }
-}
-
-/* HOST SETTINGS */
-
-function updateHostSettings(){
-  $('hostSettings').classList.toggle('hidden',!host);
-
-  const sel=$('seekerCount');
-
-  if(!sel)return;
-
-  const max=Math.max(1,players.length-1);
-  const old=Number(sel.value||1);
-
-  sel.innerHTML=Array.from({length:max},(_,i)=>`
-    <option value="${i+1}">
-      ${i+1} Seeker${i?'s':''}
-    </option>
-  `).join('');
-
-  sel.value=String(Math.min(old,max));
-
-  $('countdownDuration').disabled=!host;
-
-  $('startGame').classList.toggle('hidden',!host);
-}
-
-/* STOP LOCATION SHARING */
-
-async function stopLocation(){
-  if(watchId!==null){
-    navigator.geolocation.clearWatch(watchId);
-    watchId=null;
-  }
-
-  if(sb&&room&&user){
-    await sb.from('hs_locations')
-      .delete()
-      .eq('room_code',room)
-      .eq('user_id',user.id);
-  }
-
-  loc=null;
-
-  $('radarCaption').textContent=
-    'Location sharing stopped.';
-}
-
-/* LEAVE ROOM */
-
-async function leave(){
-  await stopLocation();
-
-  if(poller)clearInterval(poller);
-  if(gameTimer)clearInterval(gameTimer);
-  if(countdownTicker)clearInterval(countdownTicker);
-
-  countdownEnd=null;
-  matchUnlocked=false;
-  roundTimerStarted=false;
-
-  if(room&&user){
-    await sb.rpc('hs_leave_room',{
-      p_code:room
-    });
-  }
-
-  room=null;
-  host=false;
-  players=[];
-
-  show('home');
-}
-
-/* BUTTON EVENTS */
-
-$('create').onclick=createRoom;
-$('join').onclick=joinRoom;
-$('startShare').onclick=startSharing;
-$('startGame').onclick=startGame;
-$('stopShare').onclick=stopLocation;
-$('endGame').onclick=leave;
-$('leave').onclick=leave;
-
-$('copyCode').onclick=async()=>{
-  try{
-    await navigator.clipboard.writeText(room);
-    alert('Room code copied: '+room);
-  }catch(e){
-    alert('Your room code is '+room);
-  }
-};
-
-/* JOIN CODE INPUT */
-
-$('joinCode').addEventListener('input',e=>{
-  e.target.value=e.target.value
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g,'')
-    .slice(0,6);
+  setTimeout(()=>{
+   if(lastHeading===null){
+    statusText.textContent='● NO COMPASS DATA';
+    sensorText.textContent='UNAVAILABLE';
+    directionText.textContent='Check browser and sensor support';
+    startButton.textContent='TRY AGAIN';
+    startButton.disabled=false;
+   }
+  },5000);
+
+ }catch(error){
+  statusText.textContent='● COMPASS UNAVAILABLE';
+  sensorText.textContent='OFF';
+  directionText.textContent=error.message;
+  startButton.textContent='TRY AGAIN';
+  startButton.disabled=false;
+ }
 });
-
-/* WELCOME SCREEN */
-
-const intro=$('introScreen');
-
-function dismissIntro(){
-  intro.classList.add('hidden-intro');
-}
-
-intro.addEventListener('click',dismissIntro);
-
-$('introClose').addEventListener('click',e=>{
-  e.stopPropagation();
-  dismissIntro();
-});
-
-/* START */
-
-init();
-
 </script>
 </body>
 </html>
