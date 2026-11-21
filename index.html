@@ -20,7 +20,7 @@ h2{font-size:20px;margin:0}
  background:repeating-radial-gradient(circle,transparent 0 47px,#244c35 48px 49px),radial-gradient(circle,#10261a,#07120c 80%);
  box-shadow:0 0 35px #1b583855,inset 0 0 30px #1b583855;
 }
-.rotator{position:absolute;inset:0;border-radius:50%;transition:transform .12s linear}
+.rotator{position:absolute;inset:0;border-radius:50%;will-change:transform}
 .cross:before,.cross:after{content:"";position:absolute;background:#285039}
 .cross:before{height:100%;width:1px;left:50%}
 .cross:after{width:100%;height:1px;top:50%}
@@ -57,6 +57,7 @@ button:disabled{opacity:.6}
 <h2>HIDE & SEEK <span style="color:#65ed9a">.</span></h2>
 <span class="status" id="status">● WAITING</span>
 </header>
+
 <p class="sub">LIVE COMPASS · GPS RADAR</p>
 
 <div class="radar">
@@ -66,7 +67,9 @@ button:disabled{opacity:.6}
 <span class="direction s">S</span>
 <span class="direction e">E</span>
 <span class="direction w">W</span>
-<div class="dot p1"></div><div class="dot p2"></div><div class="dot p3"></div>
+<div class="dot p1"></div>
+<div class="dot p2"></div>
+<div class="dot p3"></div>
 <span class="dist d1">45m</span>
 <span class="dist d2">82m</span>
 <span class="dist d3">30m</span>
@@ -91,109 +94,320 @@ YOUR HEADING
 
 <div class="players">
 <div style="margin-bottom:5px">RADAR SIGNALS</div>
-<div class="player"><span>Your position</span><span class="green" id="position">Waiting</span></div>
-<div class="player"><span>Nearby players</span><span class="green">Demo signals</span></div>
+<div class="player">
+<span>Your position</span>
+<span class="green" id="position">Waiting</span>
 </div>
-<p class="note">Live compass and GPS permissions are requested by your browser.<br>Player signals remain simulated until connected to a game room.</p>
+<div class="player">
+<span>Nearby players</span>
+<span class="green">Demo signals</span>
+</div>
+</div>
+
+<p class="note">
+Live compass and GPS permissions are requested by your browser.<br>
+Player signals remain simulated until connected to a game room.
+</p>
 </div>
 
 <script>
-const $=id=>document.getElementById(id);
-let gpsWatch=null;
-let lastHeading=null;
-let orientationHandler=null;
+const $ = id => document.getElementById(id);
+
+let gpsWatch = null;
+let listenersActive = false;
+let compassStarted = false;
+let absoluteSeen = false;
+let lastAbsoluteTime = 0;
+let lastHeading = null;
+let filteredHeading = null;
+let headingSamples = [];
+let compassAccuracy = null;
+let compassTimeout = null;
+let compassResolve = null;
+let compassReject = null;
+
+const MAX_SAMPLES = 9;
+const FILTER_STRENGTH = 0.28;
+
+// Circular angle difference, correctly handling 359° -> 0°.
+function angleDifference(a,b){
+ return ((a-b+540)%360)-180;
+}
+
+// Circular average prevents incorrect averaging across north.
+function circularAverage(values){
+ let sin = 0;
+ let cos = 0;
+
+ for(const value of values){
+  const rad = value * Math.PI / 180;
+  sin += Math.sin(rad);
+  cos += Math.cos(rad);
+ }
+
+ if(Math.abs(sin)+Math.abs(cos)<0.000001)return null;
+
+ return (Math.atan2(sin,cos)*180/Math.PI+360)%360;
+}
 
 function directionName(deg){
  const names=['N','NE','E','SE','S','SW','W','NW'];
  return names[Math.round(deg/45)%8];
 }
 
-function updateCompass(deg){
- deg=(deg+360)%360;
- lastHeading=deg;
- $('rotator').style.transform=`rotate(${-deg}deg)`;
- $('heading').textContent=Math.round(deg)+'°';
- $('direction').textContent=directionName(deg);
- $('sensor').textContent='ON';
+function updateDisplay(deg){
+ const heading = (deg+360)%360;
+
+ $('rotator').style.transform =
+  `rotate(${-heading}deg)`;
+
+ $('heading').textContent =
+  Math.round(heading)+'°';
+
+ $('direction').textContent =
+  directionName(heading);
+
+ $('sensor').textContent = 'ON';
+ $('status').textContent = '● COMPASS ACTIVE';
 }
 
+function processHeading(raw){
+ if(!Number.isFinite(raw))return;
+
+ raw = ((raw%360)+360)%360;
+
+ // Reject isolated extreme sensor jumps.
+ if(filteredHeading !== null){
+  const difference = Math.abs(
+   angleDifference(raw,filteredHeading)
+  );
+
+  if(difference>100){
+   headingSamples.push(raw);
+
+   if(headingSamples.length<3)return;
+
+   const consistency = headingSamples.slice(-3);
+   const average = circularAverage(consistency);
+
+   if(average===null ||
+      Math.abs(angleDifference(average,raw))>35){
+    return;
+   }
+  }
+ }
+
+ headingSamples.push(raw);
+
+ if(headingSamples.length>MAX_SAMPLES){
+  headingSamples.shift();
+ }
+
+ const average = circularAverage(headingSamples);
+ if(average===null)return;
+
+ if(filteredHeading===null){
+  filteredHeading=average;
+ }else{
+  const difference=angleDifference(
+   average,filteredHeading
+  );
+
+  filteredHeading=(
+   filteredHeading+FILTER_STRENGTH*difference+360
+  )%360;
+ }
+
+ lastHeading=filteredHeading;
+ updateDisplay(filteredHeading);
+
+ if(compassResolve){
+  clearTimeout(compassTimeout);
+  compassResolve(true);
+  compassResolve=null;
+  compassReject=null;
+ }
+}
+
+// iPhone and compatible browsers provide this magnetic heading.
 function handleOrientation(e){
- let heading=null;
  if(typeof e.webkitCompassHeading==='number'){
-  heading=e.webkitCompassHeading;
- }else if(e.absolute===true && typeof e.alpha==='number'){
-  heading=360-e.alpha;
+  compassAccuracy =
+   typeof e.webkitCompassAccuracy==='number'
+   ? e.webkitCompassAccuracy
+   : null;
+
+  processHeading(e.webkitCompassHeading);
+  return;
  }
- if(heading!==null && Number.isFinite(heading)){
-  updateCompass(heading);
+
+ // Prefer absolute sensor readings over relative orientation.
+ if(e.absolute===true && typeof e.alpha==='number'){
+  absoluteSeen=true;
+  lastAbsoluteTime=Date.now();
+
+  processHeading(360-e.alpha);
  }
+}
+
+function handleAbsoluteOrientation(e){
+ if(typeof e.alpha!=='number')return;
+
+ absoluteSeen=true;
+ lastAbsoluteTime=Date.now();
+
+ processHeading(360-e.alpha);
+}
+
+function handleFallbackOrientation(e){
+ // Do not mix relative readings with absolute readings.
+ if(absoluteSeen && Date.now()-lastAbsoluteTime<2500){
+  return;
+ }
+
+ handleOrientation(e);
 }
 
 async function enableCompass(){
- if(!('DeviceOrientationEvent' in window)){
-  $('sensor').textContent='UNAVAILABLE';
-  return;
+ if(!window.DeviceOrientationEvent){
+  throw Error('Compass sensor not supported');
  }
+
+ // iOS requires permission from a user gesture.
  if(typeof DeviceOrientationEvent.requestPermission==='function'){
-  const permission=await DeviceOrientationEvent.requestPermission();
-  if(permission!=='granted')throw Error('Compass permission denied');
+  const permission =
+   await DeviceOrientationEvent.requestPermission();
+
+  if(permission!=='granted'){
+   throw Error('Compass permission denied');
+  }
  }
- if(!orientationHandler){
-  orientationHandler=handleOrientation;
-  window.addEventListener('deviceorientationabsolute',orientationHandler,true);
-  window.addEventListener('deviceorientation',orientationHandler,true);
- }
+
+ if(listenersActive)return true;
+
+ return new Promise((resolve,reject)=>{
+  compassResolve=resolve;
+  compassReject=reject;
+
+  window.addEventListener(
+   'deviceorientationabsolute',
+   handleAbsoluteOrientation,
+   true
+  );
+
+  window.addEventListener(
+   'deviceorientation',
+   handleFallbackOrientation,
+   true
+  );
+
+  listenersActive=true;
+  compassStarted=true;
+
+  compassTimeout=setTimeout(()=>{
+   if(compassResolve){
+    compassResolve=null;
+    compassReject=null;
+    reject(Error('No absolute compass data received'));
+   }
+  },8000);
+ });
 }
 
+// GPS
 function enableGPS(){
  return new Promise((resolve,reject)=>{
   if(!navigator.geolocation){
    reject(Error('GPS is not supported'));
    return;
   }
+
+  if(gpsWatch!==null){
+   resolve(true);
+   return;
+  }
+
+  let firstFix=true;
+
   gpsWatch=navigator.geolocation.watchPosition(
    pos=>{
     const coords=pos.coords;
+
     $('gps').textContent='ON';
-    $('accuracy').textContent=Math.round(coords.accuracy)+'m';
+    $('accuracy').textContent=
+     Math.round(coords.accuracy)+'m';
+
     $('position').textContent='GPS active';
-    resolve(true);
+
+    if(firstFix){
+     firstFix=false;
+     resolve(true);
+    }
    },
-   err=>reject(Error(err.message)),
-   {enableHighAccuracy:true,maximumAge:1000,timeout:15000}
+   err=>{
+    $('gps').textContent='ERROR';
+    if(firstFix){
+     firstFix=false;
+     reject(Error(err.message));
+    }
+   },
+   {
+    enableHighAccuracy:true,
+    maximumAge:0,
+    timeout:20000
+   }
   );
  });
 }
 
+// Start both permission requests from the user's tap.
 $('start').addEventListener('click',async()=>{
- $('start').disabled=true;
+ const button=$('start');
+
+ button.disabled=true;
  $('status').textContent='● REQUESTING ACCESS';
 
- // Both requests are initiated from the user's button tap.
- const compassTask=enableCompass();
- const gpsTask=enableGPS();
+ const results=await Promise.allSettled([
+  enableCompass(),
+  enableGPS()
+ ]);
 
- const results=await Promise.allSettled([compassTask,gpsTask]);
  const compassOK=results[0].status==='fulfilled';
  const gpsOK=results[1].status==='fulfilled';
 
- if(!compassOK)$('sensor').textContent='DENIED / UNSUPPORTED';
- if(!gpsOK)$('gps').textContent='DENIED / ERROR';
+ if(!compassOK){
+  $('sensor').textContent='UNAVAILABLE';
+ }
 
- $('status').textContent=compassOK&&gpsOK
-  ?'● RADAR READY':'● PARTIAL ACCESS';
+ if(!gpsOK){
+  $('gps').textContent='ERROR';
+ }
 
- $('start').textContent=compassOK&&gpsOK
-  ?'RADAR ACTIVE':'RETRY PERMISSIONS';
- $('start').disabled=false;
+ $('status').textContent=
+  compassOK&&gpsOK
+  ?'● RADAR READY'
+  :'● PARTIAL ACCESS';
+
+ button.textContent=
+  compassOK&&gpsOK
+  ?'RADAR ACTIVE'
+  :'RETRY PERMISSIONS';
+
+ button.disabled=false;
 
  if(!compassOK||!gpsOK){
-  alert('Some permissions were unavailable. Check your browser permissions and try again.');
+  alert(
+   'Some permissions or sensors were unavailable. '+
+   'Check browser support and try again.'
+  );
  }
 });
 
 window.addEventListener('pagehide',()=>{
- if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);
+ if(gpsWatch!==null){
+  navigator.geolocation.clearWatch(gpsWatch);
+  gpsWatch=null;
+ }
 });
 </script>
 </body>
